@@ -4,9 +4,10 @@ import { User, UserRole } from '../types';
 interface HeaderProps {
   currentUser: User;
   onRoleChange: (role: UserRole) => void;
+  onReset?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentUser, onRoleChange }) => {
+const Header: React.FC<HeaderProps> = ({ currentUser, onRoleChange, onReset }) => {
   const roles: { value: UserRole; label: string }[] = [
     { value: 'student', label: '学生' },
     { value: 'admin', label: '楼层管理员' },
@@ -25,7 +26,7 @@ const Header: React.FC<HeaderProps> = ({ currentUser, onRoleChange }) => {
             </div>
             <div>
               <h1 className="text-lg md:text-xl font-bold text-gray-800">高校自习室座位热力图</h1>
-              <p className="text-xs md:text-sm text-gray-500 hidden sm:block">实时座位预约与管理系统</p>
+              <p className="text-xs md:text-sm text-gray-500 hidden sm:block">实时座位预约与管理系统（数据自动保存）</p>
             </div>
           </div>
 
@@ -42,6 +43,15 @@ const Header: React.FC<HeaderProps> = ({ currentUser, onRoleChange }) => {
               </select>
             </div>
             <div className="flex items-center gap-2">
+              {onReset && (
+                <button
+                  onClick={onReset}
+                  className="hidden sm:block px-3 py-1.5 text-xs bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                  title="重置所有数据到初始状态"
+                >
+                  重置数据
+                </button>
+              )}
               <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-gray-600">{currentUser.name.charAt(0)}</span>
               </div>

@@ -1,18 +1,20 @@
 import { Building, Floor, Seat, TimeSlot, Reservation, User, ClosedArea } from '../types';
 
-const generateSeats = (floorId: string, rows: number, cols: number): Seat[] => {
+const generateDeterministicSeats = (floorId: string, rows: number, cols: number): Seat[] => {
   const seats: Seat[] = [];
   const areas = ['A区', 'B区', 'C区', 'D区'];
   
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       const areaIndex = Math.floor((row * cols + col) / (rows * cols / 4));
-      const random = Math.random();
+      const seatIndex = row * cols + col;
       let status: Seat['status'] = 'available';
       
-      if (random < 0.3) status = 'occupied';
-      else if (random < 0.35) status = 'cleaning';
-      else if (random < 0.38) status = 'closed';
+      if (seatIndex === 0) status = 'closed';
+      else if (seatIndex === 1) status = 'cleaning';
+      else if (seatIndex % 5 === 0) status = 'occupied';
+      else if (seatIndex % 13 === 0) status = 'cleaning';
+      else if (seatIndex % 17 === 0) status = 'closed';
       
       seats.push({
         id: `${floorId}-seat-${row}-${col}`,
@@ -47,7 +49,7 @@ export const floors: Floor[] = [
     buildingId: 'building-1',
     name: '1楼自习室',
     level: 1,
-    seats: generateSeats('floor-1-1', 6, 8),
+    seats: generateDeterministicSeats('floor-1-1', 6, 8),
     closedAreas: []
   },
   {
@@ -55,7 +57,7 @@ export const floors: Floor[] = [
     buildingId: 'building-1',
     name: '2楼自习室',
     level: 2,
-    seats: generateSeats('floor-1-2', 6, 8),
+    seats: generateDeterministicSeats('floor-1-2', 6, 8),
     closedAreas: []
   },
   {
@@ -63,7 +65,7 @@ export const floors: Floor[] = [
     buildingId: 'building-1',
     name: '3楼自习室',
     level: 3,
-    seats: generateSeats('floor-1-3', 6, 8),
+    seats: generateDeterministicSeats('floor-1-3', 6, 8),
     closedAreas: []
   },
   {
@@ -71,7 +73,7 @@ export const floors: Floor[] = [
     buildingId: 'building-2',
     name: '1楼自习区',
     level: 1,
-    seats: generateSeats('floor-2-1', 5, 6),
+    seats: generateDeterministicSeats('floor-2-1', 5, 6),
     closedAreas: []
   },
   {
@@ -79,7 +81,7 @@ export const floors: Floor[] = [
     buildingId: 'building-2',
     name: '2楼自习区',
     level: 2,
-    seats: generateSeats('floor-2-2', 5, 6),
+    seats: generateDeterministicSeats('floor-2-2', 5, 6),
     closedAreas: []
   }
 ];
@@ -102,6 +104,8 @@ export const users: User[] = [
   { id: 'cleaner-1', name: '赵保洁', role: 'cleaner' }
 ];
 
+const today = new Date().toISOString().split('T')[0];
+
 export const initialReservations: Reservation[] = [
   {
     id: 'res-1',
@@ -109,7 +113,7 @@ export const initialReservations: Reservation[] = [
     seatId: 'floor-1-1-seat-2-2',
     floorId: 'floor-1-1',
     buildingId: 'building-1',
-    date: new Date().toISOString().split('T')[0],
+    date: today,
     timeSlotId: 'slot-1',
     status: 'active',
     createdAt: new Date().toISOString()
@@ -120,20 +124,13 @@ export const initialReservations: Reservation[] = [
     seatId: 'floor-1-2-seat-3-3',
     floorId: 'floor-1-2',
     buildingId: 'building-1',
-    date: new Date().toISOString().split('T')[0],
+    date: today,
     timeSlotId: 'slot-1',
     status: 'active',
     createdAt: new Date().toISOString()
   }
 ];
 
-export const closedAreas: ClosedArea[] = [
-  {
-    id: 'closed-1',
-    floorId: 'floor-1-1',
-    name: 'A区维护',
-    seatIds: floors.find(f => f.id === 'floor-1-1')?.seats.filter(s => s.area === 'A区').map(s => s.id) || [],
-    reason: '设备维护',
-    createdAt: new Date().toISOString()
-  }
-];
+export const initialClosedAreas: ClosedArea[] = [];
+
+export const INITIAL_SEATS = floors.flatMap(f => f.seats);

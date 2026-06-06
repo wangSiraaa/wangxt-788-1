@@ -6,11 +6,14 @@ import ReservationSidebar from './components/ReservationSidebar';
 import Statistics from './components/Statistics';
 import AdminPanel from './components/AdminPanel';
 import CleanerPanel from './components/CleanerPanel';
-import { buildings as initialBuildings, floors as initialFloors, timeSlots, users, initialReservations, closedAreas as initialClosedAreas } from './data/mockData';
+import { buildings as initialBuildings, floors as initialFloors, timeSlots, users } from './data/mockData';
 import { checkReservationConflict, getAlternativeFloors, getFloorStatistics, generateId } from './utils/businessLogic';
 import { Seat, Reservation, ClosedArea, UserRole, User, ConflictInfo, AlternativeFloor, SeatStatus } from './types';
+import { useStore } from './store/useStore';
 
 function App() {
+  const { seats, reservations, closedAreas, toggleSeatCleaning, addReservation, addClosedArea, removeClosedArea, resetToInitial } = useStore();
+  
   const [currentUser, setCurrentUser] = useState<User>(users[0]);
   const [selectedBuildingId, setSelectedBuildingId] = useState(initialBuildings[0].id);
   const [selectedFloorId, setSelectedFloorId] = useState(initialFloors[0].id);
@@ -19,10 +22,6 @@ function App() {
   const [selectedSeat, setSelectedSeat] = useState<Seat | null>(null);
   const [statusFilter, setStatusFilter] = useState<SeatStatus | 'all'>('all');
   const [areaFilter, setAreaFilter] = useState('all');
-  
-  const [seats, setSeats] = useState(initialFloors.flatMap(f => f.seats));
-  const [reservations, setReservations] = useState<Reservation[]>(initialReservations);
-  const [closedAreas, setClosedAreas] = useState<ClosedArea[]>(initialClosedAreas);
 
   const selectedFloor = initialFloors.find(f => f.id === selectedFloorId);
   const selectedTimeSlot = timeSlots.find(t => t.id === selectedTimeSlotId);
@@ -129,33 +128,28 @@ function App() {
       createdAt: new Date().toISOString()
     };
 
-    setReservations(prev => [...prev, newReservation]);
+    addReservation(newReservation);
     setSelectedSeat(null);
-    alert('预约成功！');
-  }, [selectedSeat, conflictInfo, currentUser.id, selectedFloorId, selectedBuildingId, selectedDate, selectedTimeSlotId]);
+    alert('预约成功！刷新页面后预约仍然存在。');
+  }, [selectedSeat, conflictInfo, currentUser.id, selectedFloorId, selectedBuildingId, selectedDate, selectedTimeSlotId, addReservation]);
 
   const handleCancelReservation = useCallback(() => {
     setSelectedSeat(null);
   }, []);
 
   const handleCloseArea = useCallback((area: ClosedArea) => {
-    setClosedAreas(prev => [...prev, area]);
-    alert('区域关闭成功！');
-  }, []);
+    addClosedArea(area);
+    alert('区域关闭成功！刷新页面后仍然有效。');
+  }, [addClosedArea]);
 
   const handleOpenArea = useCallback((areaId: string) => {
-    setClosedAreas(prev => prev.filter(ca => ca.id !== areaId));
+    removeClosedArea(areaId);
     alert('区域已开放！');
-  }, []);
+  }, [removeClosedArea]);
 
   const handleToggleCleaning = useCallback((seatId: string) => {
-    setSeats(prev => prev.map(s => {
-      if (s.id === seatId) {
-        return { ...s, status: s.status === 'cleaning' ? 'available' : 'cleaning' as SeatStatus };
-      }
-      return s;
-    }));
-  }, []);
+    toggleSeatCleaning(seatId);
+  }, [toggleSeatCleaning]);
 
   const buildingsWithFloors = useMemo(() => {
     return initialBuildings.map(b => ({
@@ -166,7 +160,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Header currentUser={currentUser} onRoleChange={handleRoleChange} />
+      <Header currentUser={currentUser} onRoleChange={handleRoleChange} onReset={resetToInitial} />
       
       <main className="max-w-7xl mx-auto px-4 py-4 md:py-6">
         <SeatFilter
