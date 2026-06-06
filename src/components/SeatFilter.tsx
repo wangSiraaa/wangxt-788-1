@@ -17,6 +17,8 @@ interface SeatFilterProps {
   onTimeSlotChange: (id: string) => void;
   onStatusFilterChange: (status: SeatStatus | 'all') => void;
   onAreaFilterChange: (area: string) => void;
+  onKeyboardShortcutsClick?: () => void;
+  onHeatMapExamplesClick?: () => void;
 }
 
 const SeatFilter: React.FC<SeatFilterProps> = ({
@@ -34,14 +36,48 @@ const SeatFilter: React.FC<SeatFilterProps> = ({
   onDateChange,
   onTimeSlotChange,
   onStatusFilterChange,
-  onAreaFilterChange
+  onAreaFilterChange,
+  onKeyboardShortcutsClick,
+  onHeatMapExamplesClick
 }) => {
   const selectedBuilding = buildings.find(b => b.id === selectedBuildingId);
   const floors = selectedBuilding?.floors || [];
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 mb-4">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">筛选条件</h3>
+    <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 mb-4" data-testid="seat-filter-section">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <h3 className="text-lg font-semibold text-gray-800">筛选条件</h3>
+        <div className="flex gap-2">
+          {onKeyboardShortcutsClick && (
+            <button
+              onClick={onKeyboardShortcutsClick}
+              className="px-3 py-1.5 text-xs bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1.5"
+              data-testid="keyboard-shortcuts-btn"
+              title="键盘快捷键 (?)"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+              键盘操作
+              <kbd className="px-1 py-0.5 bg-blue-100 rounded text-[10px]">?</kbd>
+            </button>
+          )}
+          {onHeatMapExamplesClick && (
+            <button
+              onClick={onHeatMapExamplesClick}
+              className="px-3 py-1.5 text-xs bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors flex items-center gap-1.5"
+              data-testid="heatmap-examples-btn"
+              title="查看热力图样例 (E)"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+              </svg>
+              热力图样例
+              <kbd className="px-1 py-0.5 bg-green-100 rounded text-[10px]">E</kbd>
+            </button>
+          )}
+        </div>
+      </div>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <div>

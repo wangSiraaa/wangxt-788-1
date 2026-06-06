@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import Header from './components/Header';
 import SeatFilter from './components/SeatFilter';
 import HeatMap from './components/HeatMap';
@@ -6,6 +6,8 @@ import ReservationSidebar from './components/ReservationSidebar';
 import Statistics from './components/Statistics';
 import AdminPanel from './components/AdminPanel';
 import CleanerPanel from './components/CleanerPanel';
+import KeyboardShortcuts from './components/KeyboardShortcuts';
+import HeatMapExamples from './components/HeatMapExamples';
 import { buildings as initialBuildings, floors as initialFloors, timeSlots, users } from './data/mockData';
 import { checkReservationConflict, getAlternativeFloors, getFloorStatistics, generateId } from './utils/businessLogic';
 import { Seat, Reservation, ClosedArea, UserRole, User, ConflictInfo, AlternativeFloor, SeatStatus } from './types';
@@ -22,6 +24,9 @@ function App() {
   const [selectedSeat, setSelectedSeat] = useState<Seat | null>(null);
   const [statusFilter, setStatusFilter] = useState<SeatStatus | 'all'>('all');
   const [areaFilter, setAreaFilter] = useState('all');
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [showHeatMapExamples, setShowHeatMapExamples] = useState(false);
+  const [keyboardNavIndex, setKeyboardNavIndex] = useState<number>(-1);
 
   const selectedFloor = initialFloors.find(f => f.id === selectedFloorId);
   const selectedTimeSlot = timeSlots.find(t => t.id === selectedTimeSlotId);
@@ -151,6 +156,119 @@ function App() {
     toggleSeatCleaning(seatId);
   }, [toggleSeatCleaning]);
 
+  const clickableSeats = useMemo(() => {
+    if (!selectedFloor) return [];
+    return filteredSeats.filter(seat => {
+      const reservedSeatIds = reservations
+        .filter(r => r.date === selectedDate && r.timeSlotId === selectedTimeSlotId && r.status === 'active')
+        .map(r => r.seatId);
+      const closedAreaSeatIds = floorWithClosedAreas?.closedAreas.flatMap(ca => ca.seatIds) || [];
+      
+      if (closedAreaSeatIds.includes(seat.id)) return false;
+      if (seat.status === 'closed') return false;
+      if (seat.status === 'cleaning' && currentUser.role === 'student') return false;
+      if (seat.status === 'occupied' && currentUser.role === 'student') return false;
+      if (reservedSeatIds.includes(seat.id) && currentUser.role === 'student') return false;
+      return true;
+    });
+  }, [filteredSeats, selectedFloor, reservations, selectedDate, selectedTimeSlotId, floorWithClosedAreas, currentUser.role]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (showKeyboardShortcuts || showHeatMapExamples) {
+        if (e.key === 'Escape') {
+          setShowKeyboardShortcuts(false);
+          setShowHeatMapExamples(false);
+        }
+        return;
+      }
+
+      if (e.key === '?' || e.key === '/') {
+        e.preventDefault();
+        setShowKeyboardShortcuts(true);
+        return;
+      }
+
+      if (e.key === 'e' || e.key === 'E') {
+        e.preventDefault();
+        setShowHeatMapExamples(true);
+        return;
+      }
+
+      if (e.key >= '1' && e.key <= '3') {
+        const roles: UserRole[] = ['student', 'admin', 'cleaner'];
+        const roleIndex = parseInt(e.key) - 1;
+        if (roles[roleIndex]) {
+          handleRoleChange(roles[roleIndex]);
+        }
+        return;
+      }
+
+      if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        const filterSection = document.querySelector('[data-testid="seat-filter-section"]');
+        if (filterSection) {
+          filterSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        return;
+      }
+
+      if (e.key === 'h' || e.key === 'H') {
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      if (currentUser.role === 'student' && clickableSeats.length > 0) {
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+          e.preventDefault();
+          const currentIndex = keyboardNavIndex >= 0 ? keyboardNavIndex : 0;
+          let newIndex = currentIndex;
+
+          if (e.key === 'ArrowRight') {
+            newIndex = (currentIndex + 1) % clickableSeats.length;
+          } else if (e.key === 'ArrowLeft') {
+            newIndex = (currentIndex - 1 + clickableSeats.length) % clickableSeats.length;
+          } else if (e.key === 'ArrowDown') {
+            const cols = Math.max(...filteredSeats.map(s => s.col), 0) + 1;
+            newIndex = Math.min(currentIndex + cols, clickableSeats.length - 1);
+          } else if (e.key === 'ArrowUp') {
+            const cols = Math.max(...filteredSeats.map(s => s.col), 0) + 1;
+            newIndex = Math.max(currentIndex - cols, 0);
+          }
+
+          setKeyboardNavIndex(newIndex);
+          const seat = clickableSeats[newIndex];
+          if (seat) {
+            setSelectedSeat(seat);
+          }
+        }
+
+        if (e.key === 'Enter') {
+          if (selectedSeat && !conflictInfo?.hasConflict) {
+            handleReserve();
+          }
+        }
+      }
+
+      if (e.key === 'Escape') {
+        setSelectedSeat(null);
+        setKeyboardNavIndex(-1);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showKeyboardShortcuts, showHeatMapExamples, clickableSeats, keyboardNavIndex, selectedSeat, conflictInfo, currentUser.role, filteredSeats]);
+
+  const handleBackToList = useCallback(() => {
+    setShowHeatMapExamples(false);
+    const heatmapSection = document.querySelector('[data-testid="heatmap-section"]');
+    if (heatmapSection) {
+      heatmapSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, []);
+
   const buildingsWithFloors = useMemo(() => {
     return initialBuildings.map(b => ({
       ...b,
@@ -179,6 +297,8 @@ function App() {
           onTimeSlotChange={setSelectedTimeSlotId}
           onStatusFilterChange={setStatusFilter}
           onAreaFilterChange={setAreaFilter}
+          onKeyboardShortcutsClick={() => setShowKeyboardShortcuts(true)}
+          onHeatMapExamplesClick={() => setShowHeatMapExamples(true)}
         />
 
         <Statistics {...statistics} />
@@ -235,6 +355,17 @@ function App() {
           </div>
         </div>
       </main>
+
+      <KeyboardShortcuts
+        isOpen={showKeyboardShortcuts}
+        onClose={() => setShowKeyboardShortcuts(false)}
+      />
+
+      <HeatMapExamples
+        isOpen={showHeatMapExamples}
+        onClose={() => setShowHeatMapExamples(false)}
+        onBackToList={handleBackToList}
+      />
     </div>
   );
 }

@@ -50,7 +50,7 @@ const HeatMap: React.FC<HeatMapProps> = ({
   const maxCol = Math.max(...floorSeats.map(s => s.col), 0);
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-4 md:p-6">
+    <div className="bg-white rounded-xl shadow-lg p-4 md:p-6" data-testid="heatmap-section">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-800">{floor.name} - 座位分布图</h3>
         <div className="flex flex-wrap gap-3 text-xs">
